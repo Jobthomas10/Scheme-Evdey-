@@ -9,6 +9,8 @@ interface ScoreCardProps {
   estimatedAnnualBenefits: number; // e.g. 218000
   readyApplicationsCount: number; // e.g. 3
   missingDocumentsCount: number; // e.g. 2
+  totalSchemesCount?: number;
+  scoreDescription?: string;
   applicantType: string;
   incomeBand: string;
 }
@@ -18,6 +20,8 @@ export function ScoreCard({
   estimatedAnnualBenefits,
   readyApplicationsCount,
   missingDocumentsCount,
+  totalSchemesCount = 4,
+  scoreDescription,
   applicantType,
   incomeBand,
 }: ScoreCardProps) {
@@ -81,7 +85,7 @@ export function ScoreCard({
                 strokeDasharray={circumference}
                 initial={{ strokeDashoffset: circumference }}
                 animate={{ strokeDashoffset }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
                 strokeLinecap="round"
                 stroke="currentColor"
                 fill="transparent"
@@ -91,9 +95,10 @@ export function ScoreCard({
             {/* Inner Score Value */}
             <div className="absolute flex flex-col items-center justify-center text-center">
               <motion.span
-                initial={{ scale: 0.5, opacity: 0 }}
+                key={score}
+                initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.5, duration: 0.5 }}
+                transition={{ duration: 0.4 }}
                 className="text-5xl font-heading font-extrabold text-white tracking-tight"
               >
                 {score}
@@ -108,7 +113,7 @@ export function ScoreCard({
             Benefit Potential Score
           </h3>
           <p className="text-xs text-slate-400 max-w-xs mt-1">
-            High entitlement match based on widow status, school dependents & Kerala BPL eligibility.
+            {scoreDescription || "Dynamic readiness score proportional to document availability and scheme eligibility."}
           </p>
         </div>
 
@@ -181,7 +186,7 @@ export function ScoreCard({
             </div>
             <div>
               <span className="text-3xl font-heading font-bold text-white block">
-                4
+                {totalSchemesCount}
               </span>
               <span className="text-xs text-slate-400 mt-0.5 block">
                 High-confidence schemes

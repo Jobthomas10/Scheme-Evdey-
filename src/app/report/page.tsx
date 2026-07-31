@@ -115,7 +115,7 @@ function ReportContent() {
     return Array.from(uniqueSet);
   }, [reportData]);
 
-  // Initialize available documents (defaults to baseline identity docs or top docs)
+  // Initialize available documents (defaults to baseline identity docs)
   const initializeAvailableDocs = (schemes: any[]) => {
     const rawList = schemes.flatMap((s) => s.requiredDocuments || []);
     const defaults = rawList.filter((d) =>
@@ -177,6 +177,62 @@ function ReportContent() {
     initializeAvailableDocs(newReport.schemes || []);
   };
 
+  // Real-time Dynamic Score & Metric Calculations proportional to Document Availability
+  const {
+    dynamicScore,
+    dynamicReadyAppsCount,
+    dynamicMissingDocsCount,
+    avgReadinessPercent,
+  } = useMemo(() => {
+    if (!reportData || !reportData.schemes || reportData.schemes.length === 0) {
+      return {
+        dynamicScore: 60,
+        dynamicReadyAppsCount: 0,
+        dynamicMissingDocsCount: 0,
+        avgReadinessPercent: 0,
+      };
+    }
+
+    let totalReadinessRatioSum = 0;
+    let readyAppsCount = 0;
+
+    reportData.schemes.forEach((scheme) => {
+      const required = scheme.requiredDocuments || [];
+      if (required.length === 0) {
+        totalReadinessRatioSum += 1;
+        readyAppsCount++;
+      } else {
+        const availableCount = required.filter((doc) =>
+          availableDocs.some(
+            (userDoc) =>
+              userDoc.toLowerCase().trim() === doc.toLowerCase().trim() ||
+              userDoc.toLowerCase().includes(doc.toLowerCase()) ||
+              doc.toLowerCase().includes(userDoc.toLowerCase())
+          )
+        ).length;
+
+        const ratio = availableCount / required.length;
+        totalReadinessRatioSum += ratio;
+
+        if (availableCount === required.length) {
+          readyAppsCount++;
+        }
+      }
+    });
+
+    const avgReadiness = totalReadinessRatioSum / reportData.schemes.length;
+    const baseScore = Math.min(60, 50 + reportData.schemes.length * 4);
+    const calculatedScore = Math.min(98, Math.max(50, Math.round(baseScore + avgReadiness * 38)));
+    const missingDocsCount = uniqueDocuments.filter((d) => !availableDocs.includes(d)).length;
+
+    return {
+      dynamicScore: calculatedScore,
+      dynamicReadyAppsCount: readyAppsCount,
+      dynamicMissingDocsCount: missingDocsCount,
+      avgReadinessPercent: Math.round(avgReadiness * 100),
+    };
+  }, [reportData, availableDocs, uniqueDocuments]);
+
   if (isLoadingApi || !reportData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
@@ -201,7 +257,7 @@ function ReportContent() {
     return scheme.category === activeCategory;
   });
 
-  // Rank/Sort schemes based on Document Readiness % (Requirement 6)
+  // Rank/Sort schemes based on Document Readiness %
   const rankedSchemes = [...filteredSchemes].sort((a, b) => {
     const reqA = a.requiredDocuments || [];
     const availA = reqA.filter((doc) =>
@@ -226,7 +282,7 @@ function ReportContent() {
     const scoreB = reqB.length > 0 ? availB.length / reqB.length : 1;
 
     if (scoreB !== scoreA) {
-      return scoreB - scoreA; // Prioritize higher readiness %
+      return scoreB - scoreA;
     }
     return (b.confidenceScore || 0) - (a.confidenceScore || 0);
   });
@@ -245,6 +301,8 @@ function ReportContent() {
   const savedSchemesList = reportData.schemes.filter((s) =>
     bookmarkedSchemeIds.includes(s.id)
   );
+
+  const profileSummaryText = `Dynamic readiness score proportional to document availability (${avgReadinessPercent}% ready) for your ${reportData.extractedProfile.occupation || "citizen"} profile.`;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -325,19 +383,21 @@ function ReportContent() {
         {/* Tab 1: Main Dashboard Report */}
         {activeTab === "dashboard" && (
           <div className="space-y-10">
-            {/* Centerpiece Hero ScoreCard */}
+            {/* Centerpiece Hero ScoreCard (Calculated dynamically) */}
             <ScoreCard
-              score={reportData.benefitPotentialScore}
+              score={dynamicScore}
               estimatedAnnualBenefits={reportData.estimatedAnnualBenefitsRupees}
-              readyApplicationsCount={reportData.applicationsReadyCount}
-              missingDocumentsCount={reportData.missingDocsCount}
+              readyApplicationsCount={dynamicReadyAppsCount}
+              missingDocumentsCount={dynamicMissingDocsCount}
+              totalSchemesCount={reportData.schemes.length}
+              scoreDescription={profileSummaryText}
               applicantType={`${reportData.extractedProfile.gender || "Citizen"} • ${reportData.extractedProfile.occupation || "Applicant"}`}
               incomeBand={`₹${(
                 reportData.extractedProfile.annualIncomeRupees || 200000
               ).toLocaleString("en-IN")} / yr`}
             />
 
-            {/* Dynamic Document Availability Section (Requirements 1-3) */}
+            {/* Dynamic Document Availability Section */}
             {uniqueDocuments.length > 0 && (
               <DocumentChecklist
                 uniqueDocuments={uniqueDocuments}
