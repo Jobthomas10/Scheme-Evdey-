@@ -13,10 +13,13 @@ import {
   BookmarkCheck,
   Building2,
   Sparkles,
+  ShieldCheck,
+  XCircle,
 } from "lucide-react";
 
 interface SchemeCardProps {
   scheme: Scheme;
+  userAvailableDocs?: string[];
   lang?: "en" | "ml";
   onBookmarked?: (schemeId: string) => void;
   isBookmarked?: boolean;
@@ -24,6 +27,7 @@ interface SchemeCardProps {
 
 export function SchemeCard({
   scheme,
+  userAvailableDocs = [],
   lang = "en",
   onBookmarked,
   isBookmarked,
@@ -31,35 +35,53 @@ export function SchemeCard({
   const [showCitation, setShowCitation] = useState<boolean>(false);
   const [showDetails, setShowDetails] = useState<boolean>(true);
 
-  // Status badge styling
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "ready_today":
-        return {
-          label: lang === "en" ? "Ready Today" : "അടിയന്തര അപേക്ഷ",
-          bg: "bg-emerald-100 text-emerald-800 border-emerald-300",
-        };
-      case "missing_docs":
-        return {
-          label: lang === "en" ? "Missing 1 Document" : "1 രേഖ ഹാജരാക്കണം",
-          bg: "bg-rose-100 text-rose-800 border-rose-300",
-        };
-      default:
-        return {
-          label: lang === "en" ? "Verification Needed" : "പരിശോധന വേണം",
-          bg: "bg-amber-100 text-amber-800 border-amber-300",
-        };
+  // Document Readiness Comparison
+  const requiredDocs = scheme.requiredDocuments || [];
+  const availableDocs = requiredDocs.filter((doc) =>
+    userAvailableDocs.some(
+      (userDoc) =>
+        userDoc.toLowerCase().trim() === doc.toLowerCase().trim() ||
+        userDoc.toLowerCase().includes(doc.toLowerCase()) ||
+        doc.toLowerCase().includes(userDoc.toLowerCase())
+    )
+  );
+  const missingDocs = requiredDocs.filter(
+    (doc) => !availableDocs.includes(doc)
+  );
+
+  const readinessPercent =
+    requiredDocs.length > 0
+      ? Math.round((availableDocs.length / requiredDocs.length) * 100)
+      : 100;
+
+  // Status badge styling based on document readiness
+  const getStatusBadge = () => {
+    if (readinessPercent === 100) {
+      return {
+        label: lang === "en" ? "Ready Today (100%)" : "അടിയന്തര അപേക്ഷ",
+        bg: "bg-emerald-100 text-emerald-800 border-emerald-300",
+      };
+    } else if (readinessPercent >= 50) {
+      return {
+        label: lang === "en" ? `Action Needed (${readinessPercent}% Ready)` : "ഭാഗിക വിവരങ്ങൾ",
+        bg: "bg-amber-100 text-amber-800 border-amber-300",
+      };
+    } else {
+      return {
+        label: lang === "en" ? `Missing Docs (${readinessPercent}% Ready)` : "രേഖകൾ ആവശ്യമാണ്",
+        bg: "bg-rose-100 text-rose-800 border-rose-300",
+      };
     }
   };
 
-  const statusInfo = getStatusBadge(scheme.status);
+  const statusInfo = getStatusBadge();
 
   return (
     <div
       id={`scheme-card-${scheme.id}`}
       className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 relative"
     >
-      {/* Top Bar: Dept + State/Central Tag + Confidence Pill */}
+      {/* Top Bar: Dept + State/Central Tag + Readiness Pill */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center space-x-2 text-xs text-slate-500 font-medium">
           <Building2 className="w-4 h-4 text-teal-600 shrink-0" />
@@ -73,10 +95,18 @@ export function SchemeCard({
         </div>
 
         <div className="flex items-center space-x-2">
-          {/* Confidence percentage badge */}
-          <div className="flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-extrabold bg-teal-50 text-teal-800 border border-teal-200">
-            <Sparkles className="w-3.5 h-3.5 text-teal-600 animate-pulse" />
-            <span>{scheme.confidenceScore}% Match Confidence</span>
+          {/* Document Readiness percentage badge */}
+          <div
+            className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-extrabold border ${
+              readinessPercent === 100
+                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                : readinessPercent >= 50
+                ? "bg-amber-50 text-amber-800 border-amber-300"
+                : "bg-rose-50 text-rose-800 border-rose-300"
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Document Readiness: {readinessPercent}%</span>
           </div>
 
           {/* Bookmark Button */}
@@ -132,9 +162,90 @@ export function SchemeCard({
         </span>
       </div>
 
+      {/* Natural AI Recommendation Box */}
+      <div className="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 mb-4 text-xs text-indigo-950 flex items-start gap-2.5">
+        <Sparkles className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+        <div>
+          <span className="font-bold block mb-0.5">Scheme Recommendation Note:</span>
+          <span>
+            {readinessPercent === 100
+              ? `${scheme.title} is recommended because you are eligible and already have all required documents (100% ready). You can apply immediately today.`
+              : `${scheme.title} is recommended because you are eligible and already have ${availableDocs.length} of ${requiredDocs.length} required documents (${readinessPercent}% ready). You only need to obtain ${missingDocs.join(", ")} before applying.`}
+          </span>
+        </div>
+      </div>
+
+      {/* Document Availability Breakdown Section */}
+      <div className="my-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs uppercase font-extrabold text-slate-800 tracking-wider">
+            Document Breakdown for this Scheme
+          </span>
+          <span className="text-xs font-bold text-slate-600">
+            {availableDocs.length} / {requiredDocs.length} Available
+          </span>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+          <div
+            className={`h-full transition-all duration-500 ${
+              readinessPercent === 100
+                ? "bg-emerald-500"
+                : readinessPercent >= 50
+                ? "bg-amber-500"
+                : "bg-rose-500"
+            }`}
+            style={{ width: `${readinessPercent}%` }}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+          {/* Available Docs List */}
+          <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200">
+            <span className="font-bold text-emerald-950 block mb-1.5 flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Available Documents ({availableDocs.length})</span>
+            </span>
+            {availableDocs.length > 0 ? (
+              <ul className="space-y-1 pl-1">
+                {availableDocs.map((doc, idx) => (
+                  <li key={idx} className="text-[11px] text-emerald-900 font-medium flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
+                    <span>{doc}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <span className="text-[11px] text-emerald-800 italic">None selected yet</span>
+            )}
+          </div>
+
+          {/* Missing Docs List */}
+          <div className="p-3 rounded-xl bg-rose-50/80 border border-rose-200">
+            <span className="font-bold text-rose-950 block mb-1.5 flex items-center gap-1">
+              <XCircle className="w-3.5 h-3.5 text-rose-600" />
+              <span>Missing Documents ({missingDocs.length})</span>
+            </span>
+            {missingDocs.length > 0 ? (
+              <ul className="space-y-1 pl-1">
+                {missingDocs.map((doc, idx) => (
+                  <li key={idx} className="text-[11px] text-rose-900 font-medium flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0" />
+                    <span>{doc}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <span className="text-[11px] text-emerald-700 font-bold">✓ All required documents available!</span>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Accordion: Why Eligible / Why Not */}
       {showDetails && (
-        <div className="my-4 pt-4 border-t border-slate-100 space-y-3">
+        <div className="my-4 pt-2 space-y-3">
           {/* Why Eligible List */}
           <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-200/80">
             <h4 className="text-xs font-extrabold text-emerald-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
@@ -155,31 +266,6 @@ export function SchemeCard({
               ))}
             </ul>
           </div>
-
-          {/* Why Pending / Missing Docs */}
-          {scheme.whyNotOrPending && scheme.whyNotOrPending.length > 0 && (
-            <div className="bg-rose-50/70 p-4 rounded-2xl border border-rose-200/80">
-              <h4 className="text-xs font-extrabold text-rose-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4 text-rose-600" />
-                <span>
-                  {lang === "en"
-                    ? "Pending Requirements / Missing Docs"
-                    : "ലഭ്യമാക്കേണ്ട രേഖകൾ"}
-                </span>
-              </h4>
-              <ul className="space-y-1.5 pl-1">
-                {scheme.whyNotOrPending.map((pending, idx) => (
-                  <li
-                    key={idx}
-                    className="text-xs text-rose-900 font-medium flex items-start space-x-2"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-600 mt-1.5 shrink-0" />
-                    <span>{pending}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
       )}
 
@@ -222,7 +308,7 @@ export function SchemeCard({
                 rel="noreferrer"
                 className="inline-flex items-center text-[11px] font-bold text-teal-400 hover:underline pt-1"
               >
-                <span>Verify on Official Kerala Gazette Portal</span>
+                <span>Verify on Official Government Gazette Portal</span>
                 <ExternalLink className="w-3 h-3 ml-1" />
               </a>
             )}

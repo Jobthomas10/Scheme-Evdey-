@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,11 +35,12 @@ function ReportContent() {
   const [showJsonModal, setShowJsonModal] = useState<boolean>(false);
   const [isLoadingApi, setIsLoadingApi] = useState<boolean>(true);
 
-  // UI States
+  // UI & Document Checklist States
   const [activeTab, setActiveTab] = useState<"dashboard" | "my_schemes" | "profile">("dashboard");
   const [lang, setLang] = useState<"en" | "ml">("en");
   const [activeCategory, setActiveCategory] = useState<SchemeCategory>("all");
   const [bookmarkedSchemeIds, setBookmarkedSchemeIds] = useState<string[]>([]);
+  const [availableDocs, setAvailableDocs] = useState<string[]>([]);
 
   useEffect(() => {
     let currentStory = searchParams.get("story");
@@ -62,7 +63,7 @@ function ReportContent() {
       }
     }
 
-    // Call live API (powered by xAI Grok)
+    // Fetch scheme reasoning
     setIsLoadingApi(true);
     fetch("/api/benefits", {
       method: "POST",
@@ -73,21 +74,24 @@ function ReportContent() {
       .then((resData) => {
         if (resData.success && resData.data) {
           setReportData(resData.data);
+          initializeAvailableDocs(resData.data.schemes || []);
         } else {
-          // Fallback to local rule engine
           const profile = extractProfileFromStory(currentStory!);
-          setReportData(evaluateProfileSchemes(profile));
+          const report = evaluateProfileSchemes(profile);
+          setReportData(report);
+          initializeAvailableDocs(report.schemes || []);
         }
       })
       .catch(() => {
         const profile = extractProfileFromStory(currentStory!);
-        setReportData(evaluateProfileSchemes(profile));
+        const report = evaluateProfileSchemes(profile);
+        setReportData(report);
+        initializeAvailableDocs(report.schemes || []);
       })
       .finally(() => {
         setIsLoadingApi(false);
       });
 
-    // Trigger celebratory confetti on initial report render
     try {
       confetti({
         particleCount: 70,
@@ -95,10 +99,48 @@ function ReportContent() {
         origin: { y: 0.6 },
         colors: ["#0d9488", "#312e81", "#10b981", "#38bdf8"],
       });
-    } catch (e) {
-      // Ignore if confetti unavailable
-    }
+    } catch (e) {}
   }, [searchParams]);
+
+  // Extract unique required documents from matched schemes
+  const uniqueDocuments = useMemo(() => {
+    if (!reportData || !reportData.schemes) return [];
+    const rawList = reportData.schemes.flatMap((s) => s.requiredDocuments || []);
+    const uniqueSet = new Set<string>();
+    rawList.forEach((doc) => {
+      if (doc && doc.trim().length > 0) {
+        uniqueSet.add(doc.trim());
+      }
+    });
+    return Array.from(uniqueSet);
+  }, [reportData]);
+
+  // Initialize available documents (defaults to baseline identity docs or top docs)
+  const initializeAvailableDocs = (schemes: any[]) => {
+    const rawList = schemes.flatMap((s) => s.requiredDocuments || []);
+    const defaults = rawList.filter((d) =>
+      d.toLowerCase().includes("aadhaar") ||
+      d.toLowerCase().includes("ration") ||
+      d.toLowerCase().includes("bank")
+    );
+    setAvailableDocs(Array.from(new Set(defaults)));
+  };
+
+  const handleToggleDoc = (docName: string) => {
+    setAvailableDocs((prev) =>
+      prev.includes(docName)
+        ? prev.filter((d) => d !== docName)
+        : [...prev, docName]
+    );
+  };
+
+  const handleSelectAllDocs = () => {
+    if (availableDocs.length === uniqueDocuments.length) {
+      setAvailableDocs([]);
+    } else {
+      setAvailableDocs([...uniqueDocuments]);
+    }
+  };
 
   const handleToggleBookmark = (schemeId: string) => {
     setBookmarkedSchemeIds((prev) =>
@@ -124,8 +166,6 @@ function ReportContent() {
 
   const handleUpdateProfile = (updatedProfile: UserProfileSummary) => {
     if (!reportData) return;
-    
-    // Re-extract & re-evaluate schemes dynamically
     const reconstructedText = `Profile: ${updatedProfile.gender || "Individual"} ${updatedProfile.occupation || "Applicant"} from ${updatedProfile.state}, Income: ₹${updatedProfile.annualIncomeRupees}, Age: ${updatedProfile.age}`;
     const newExtracted = extractProfileFromStory(reconstructedText);
     newExtracted.annualIncomeRupees = updatedProfile.annualIncomeRupees || 200000;
@@ -134,6 +174,7 @@ function ReportContent() {
     
     const newReport = evaluateProfileSchemes(newExtracted);
     setReportData(newReport);
+    initializeAvailableDocs(newReport.schemes || []);
   };
 
   if (isLoadingApi || !reportData) {
@@ -144,7 +185,7 @@ function ReportContent() {
             <Cpu className="w-8 h-8 animate-spin" />
           </div>
           <h3 className="text-xl font-heading font-bold text-white">
-            xAI Grok Reasoning Engine Active
+            BenefitMax AI Engine Active
           </h3>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
             Extracting JSON profile & evaluating official Government of India + Kerala State gazette rules...
@@ -160,7 +201,36 @@ function ReportContent() {
     return scheme.category === activeCategory;
   });
 
-  // Calculate category counts
+  // Rank/Sort schemes based on Document Readiness % (Requirement 6)
+  const rankedSchemes = [...filteredSchemes].sort((a, b) => {
+    const reqA = a.requiredDocuments || [];
+    const availA = reqA.filter((doc) =>
+      availableDocs.some(
+        (userDoc) =>
+          userDoc.toLowerCase().trim() === doc.toLowerCase().trim() ||
+          userDoc.toLowerCase().includes(doc.toLowerCase()) ||
+          doc.toLowerCase().includes(userDoc.toLowerCase())
+      )
+    );
+    const scoreA = reqA.length > 0 ? availA.length / reqA.length : 1;
+
+    const reqB = b.requiredDocuments || [];
+    const availB = reqB.filter((doc) =>
+      availableDocs.some(
+        (userDoc) =>
+          userDoc.toLowerCase().trim() === doc.toLowerCase().trim() ||
+          userDoc.toLowerCase().includes(doc.toLowerCase()) ||
+          doc.toLowerCase().includes(userDoc.toLowerCase())
+      )
+    );
+    const scoreB = reqB.length > 0 ? availB.length / reqB.length : 1;
+
+    if (scoreB !== scoreA) {
+      return scoreB - scoreA; // Prioritize higher readiness %
+    }
+    return (b.confidenceScore || 0) - (a.confidenceScore || 0);
+  });
+
   const categoryCounts: Record<SchemeCategory, number> = {
     all: reportData.schemes.length,
     pension: reportData.schemes.filter((s) => s.category === "pension").length,
@@ -202,11 +272,6 @@ function ReportContent() {
           </Link>
 
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold">
-              <Cpu className="w-3.5 h-3.5 text-teal-600" />
-              <span>xAI Grok Reasoning Engine Live</span>
-            </span>
-
             <button
               onClick={() => setShowJsonModal(true)}
               className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all flex items-center gap-1.5 border border-slate-200"
@@ -272,19 +337,29 @@ function ReportContent() {
               ).toLocaleString("en-IN")} / yr`}
             />
 
+            {/* Dynamic Document Availability Section (Requirements 1-3) */}
+            {uniqueDocuments.length > 0 && (
+              <DocumentChecklist
+                uniqueDocuments={uniqueDocuments}
+                availableDocs={availableDocs}
+                onToggleDoc={handleToggleDoc}
+                onSelectAll={handleSelectAllDocs}
+              />
+            )}
+
             {/* Scheme Category Filter Bar */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-4">
                 <div>
                   <span className="text-xs uppercase font-extrabold tracking-wider text-teal-700 block mb-1">
-                    Verified Entitlements
+                    Verified Entitlements (Ranked by Document Readiness)
                   </span>
                   <h2 className="text-2xl sm:text-3xl font-heading font-bold text-slate-900">
                     Official Scheme Matches ({reportData.schemes.length})
                   </h2>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Showing {filteredSchemes.length} of {reportData.schemes.length} verified government schemes
+                  Showing {rankedSchemes.length} of {reportData.schemes.length} verified government schemes
                 </p>
               </div>
 
@@ -306,7 +381,7 @@ function ReportContent() {
                   BenefitMax AI strictly enforces official eligibility requirements. Adjust income, occupation, or age parameters in the Profile tab to test other criteria.
                 </p>
               </div>
-            ) : filteredSchemes.length === 0 ? (
+            ) : rankedSchemes.length === 0 ? (
               <div className="bg-white border border-slate-200 rounded-3xl p-10 text-center space-y-3 shadow-sm">
                 <p className="text-base font-bold text-slate-800">
                   No official scheme matches this specific filter category.
@@ -320,10 +395,11 @@ function ReportContent() {
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-6">
-                {filteredSchemes.map((scheme, index) => (
+                {rankedSchemes.map((scheme) => (
                   <SchemeCard
                     key={scheme.id}
                     scheme={scheme}
+                    userAvailableDocs={availableDocs}
                     lang={lang}
                     onBookmarked={handleToggleBookmark}
                     isBookmarked={bookmarkedSchemeIds.includes(scheme.id)}
@@ -335,11 +411,6 @@ function ReportContent() {
             {/* Vertical Roadmap Timeline */}
             {reportData.schemes.length > 0 && reportData.roadmap && (
               <RoadmapTimeline steps={reportData.roadmap} />
-            )}
-
-            {/* Document Checklist */}
-            {reportData.schemes.length > 0 && reportData.documents && (
-              <DocumentChecklist documents={reportData.documents} />
             )}
           </div>
         )}
@@ -455,7 +526,7 @@ export default function ReportPage() {
               <Cpu className="w-8 h-8 animate-spin" />
             </div>
             <h3 className="text-xl font-heading font-bold text-white">
-              Connecting to xAI Grok Engine...
+              Connecting to BenefitMax AI Engine...
             </h3>
           </div>
         </div>

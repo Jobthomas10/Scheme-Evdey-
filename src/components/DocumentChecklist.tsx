@@ -1,116 +1,97 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { DocumentItem } from "@/lib/types";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { CheckCircle2, FileCheck2 } from "lucide-react";
 
-interface DocumentChecklistProps {
-  documents: DocumentItem[];
+interface DocumentAvailabilityProps {
+  uniqueDocuments: string[];
+  availableDocs: string[];
+  onToggleDoc: (docName: string) => void;
+  onSelectAll: () => void;
 }
 
-export function DocumentChecklist({ documents }: DocumentChecklistProps) {
+export function DocumentChecklist({
+  uniqueDocuments,
+  availableDocs,
+  onToggleDoc,
+  onSelectAll,
+}: DocumentAvailabilityProps) {
+  const allSelected = uniqueDocuments.length > 0 && uniqueDocuments.every((d) => availableDocs.includes(d));
+
   return (
-    <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200/80">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-100">
+    <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
         <div>
-          <span className="text-xs uppercase font-extrabold tracking-wider text-indigo-700 block mb-1">
-            Verification & Prerequisites
+          <span className="text-xs uppercase font-extrabold tracking-wider text-teal-700 block mb-1">
+            Dynamic Verification Flow
           </span>
-          <h3 className="text-2xl font-heading font-bold text-slate-900">
-            Document Readiness Checklist
+          <h3 className="text-2xl font-heading font-bold text-slate-900 flex items-center gap-2">
+            <FileCheck2 className="w-6 h-6 text-teal-600" />
+            <span>Document Availability</span>
           </h3>
+          <p className="text-xs text-slate-500 mt-1">
+            Select the government documents you currently possess to instantly calculate your application readiness for matched schemes.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300">
-            3 Ready
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-xs font-bold text-teal-900 bg-teal-50 px-3 py-1.5 rounded-full border border-teal-200">
+            {availableDocs.length} of {uniqueDocuments.length} Selected
           </span>
-          <span className="text-xs font-bold text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
-            2 Missing / Action Needed
-          </span>
+
+          <button
+            onClick={onSelectAll}
+            className="text-xs font-bold text-indigo-700 hover:text-indigo-900 hover:underline px-2 py-1"
+          >
+            {allSelected ? "Deselect All" : "Select All"}
+          </button>
         </div>
       </div>
 
-      {/* Documents List */}
-      <div className="grid grid-cols-1 gap-4">
-        {documents.map((doc, idx) => {
-          const isReady = doc.status === "ready";
-          const isEasy = doc.status === "easy_to_obtain";
+      {/* Checkbox Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        {uniqueDocuments.map((docName, idx) => {
+          const isChecked = availableDocs.includes(docName);
 
           return (
-            <motion.div
-              key={doc.id}
-              initial={{ opacity: 0, y: 15 }}
+            <motion.label
+              key={idx}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.08 }}
-              className={`p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                isReady
-                  ? "bg-emerald-50/40 border-emerald-200/80"
-                  : isEasy
-                  ? "bg-amber-50/40 border-amber-200/80"
-                  : "bg-rose-50/40 border-rose-200/80"
+              transition={{ delay: idx * 0.05 }}
+              onClick={() => onToggleDoc(docName)}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group ${
+                isChecked
+                  ? "bg-teal-50/90 border-teal-300 ring-2 ring-teal-500/20 text-slate-900 shadow-sm"
+                  : "bg-slate-50/60 border-slate-200 hover:bg-slate-100/80 text-slate-600"
               }`}
             >
-              <div className="flex items-start gap-4">
+              <div className="flex items-center gap-3 pr-2">
                 <div
-                  className={`p-2.5 rounded-xl shrink-0 mt-0.5 ${
-                    isReady
-                      ? "bg-emerald-500 text-white"
-                      : isEasy
-                      ? "bg-amber-500 text-white"
-                      : "bg-rose-500 text-white"
+                  className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all ${
+                    isChecked
+                      ? "bg-teal-600 border-teal-600 text-white"
+                      : "border-slate-300 bg-white group-hover:border-slate-400"
                   }`}
                 >
-                  {isReady ? (
-                    <CheckCircle2 className="w-5 h-5" />
-                  ) : (
-                    <AlertCircle className="w-5 h-5" />
-                  )}
+                  {isChecked && <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
 
-                <div>
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <span className="font-heading font-bold text-slate-900 text-base">
-                      {doc.name}
-                    </span>
-                    {doc.malayalamName && (
-                      <span className="text-xs font-bold text-teal-700 font-sans">
-                        ({doc.malayalamName})
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-slate-600 mb-2">
-                    <span className="font-semibold text-slate-700">Authority:</span>{" "}
-                    {doc.issuingAuthority}
-                  </p>
-
-                  <p className="text-xs text-slate-500 bg-white/80 p-2.5 rounded-xl border border-slate-200/60 font-mono">
-                    <span className="font-sans font-bold text-slate-700">How to get:</span>{" "}
-                    {doc.howToObtain}
-                  </p>
-                </div>
-              </div>
-
-              {/* Status Badge */}
-              <div className="shrink-0 text-left md:text-right">
-                <span
-                  className={`inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full ${
-                    isReady
-                      ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                      : isEasy
-                      ? "bg-amber-100 text-amber-800 border border-amber-300"
-                      : "bg-rose-100 text-rose-800 border border-rose-300"
-                  }`}
-                >
-                  {isReady
-                    ? "✓ Verified Ready"
-                    : isEasy
-                    ? "⚡ Easy to Obtain"
-                    : "⚠️ Action Required"}
+                <span className={`text-xs font-semibold ${isChecked ? "font-bold text-teal-950" : "text-slate-700"}`}>
+                  {docName}
                 </span>
               </div>
-            </motion.div>
+
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                  isChecked
+                    ? "bg-teal-100 text-teal-800"
+                    : "bg-slate-200/80 text-slate-500"
+                }`}
+              >
+                {isChecked ? "Available" : "Missing"}
+              </span>
+            </motion.label>
           );
         })}
       </div>
