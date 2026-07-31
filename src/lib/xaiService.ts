@@ -37,7 +37,7 @@ export async function callXAiGrokReasoning(
     return fallbackReport;
   }
 
-  const systemPrompt = `You are the AI engine for "BenefitMax AI", an official government benefit discovery engine for Government of India and Kerala State schemes.
+  const systemPrompt = `You are the AI engine for "Scheme എവിടെ?", an official government benefit discovery engine for Government of India and Kerala State schemes.
 
 STRICT ACCURACY LAWS:
 1. Provide ONLY accurate and verifiable information about Government of India & Kerala State Government schemes.

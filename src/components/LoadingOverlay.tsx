@@ -188,7 +188,7 @@ export function LoadingOverlay({ storyText, onComplete }: LoadingOverlayProps) {
         </div>
 
         <h3 className="text-2xl font-heading font-bold text-slate-900 tracking-tight mb-2">
-          BenefitMax AI Reasoning Engine
+          Scheme <span className="font-sans text-teal-600">എവിടെ?</span> Reasoning Engine
         </h3>
         <p className="text-xs text-slate-500 max-w-md mx-auto mb-8 line-clamp-2 italic">
           "{storyText}"

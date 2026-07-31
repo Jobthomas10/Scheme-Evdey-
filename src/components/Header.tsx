@@ -47,10 +47,10 @@ export function Header({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-heading font-extrabold text-lg sm:text-xl tracking-tight text-slate-900">
-                JanMitra<span className="text-teal-600">.AI</span>
+                Scheme <span className="text-teal-600 font-sans">എവിടെ?</span>
               </span>
-              <span className="bg-indigo-50 border border-indigo-200/80 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline-block">
-                Kerala Edition
+              <span className="bg-teal-50 border border-teal-200/80 text-teal-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline-block">
+                Kerala AI
               </span>
             </div>
           </div>

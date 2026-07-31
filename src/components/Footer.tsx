@@ -60,11 +60,11 @@ export function Footer() {
                 <Landmark className="w-5 h-5 text-teal-300" />
               </div>
               <span className="font-heading font-extrabold text-xl text-white">
-                JanMitra<span className="text-teal-400">.AI</span>
+                Scheme <span className="text-teal-400 font-sans">എവിടെ?</span>
               </span>
             </div>
             <p className="text-xs leading-relaxed text-slate-400 max-w-md">
-              JanMitra AI bridges the gap between citizens and public welfare. By parsing complex state and central schemes into personalized Family Benefit Reports, we ensure no deserving family in Kerala misses out on their statutory entitlements.
+              Scheme എവിടെ? bridges the gap between citizens and public welfare. By parsing complex state and central schemes into personalized Family Benefit Reports, we ensure no deserving family in Kerala misses out on their statutory entitlements.
             </p>
           </div>
 

@@ -59,7 +59,7 @@ export default function Home() {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-100/80 border border-indigo-200 text-indigo-900 text-xs sm:text-sm font-semibold mb-6 shadow-sm"
         >
           <Sparkles className="w-4 h-4 text-teal-600 animate-pulse" />
-          <span>BenefitMax AI • Verified Government Scheme Reasoning Engine</span>
+          <span>Scheme എവിടെ? • Verified Government Benefit Reasoning Engine</span>
         </motion.div>
 
         {/* Main Title */}
@@ -79,7 +79,7 @@ export default function Home() {
           transition={{ delay: 0.2 }}
           className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-10"
         >
-          Describe your situation in your own words. BenefitMax AI parses 140+ official Government of India & Kerala State gazettes to return verified schemes for your exact profile.
+          Describe your situation in your own words. Scheme എവിടെ? parses 140+ official Government of India & Kerala State gazettes to return verified schemes for your exact profile.
         </motion.p>
 
         {/* Main Form Box */}
@@ -170,7 +170,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-14">
             <h2 className="text-3xl font-heading font-bold text-slate-900 tracking-tight">
-              BenefitMax AI Verification Protocol
+              Scheme എവിടെ? Verification Protocol
             </h2>
             <p className="text-slate-600 text-base mt-2">
               Every scheme recommendation is cross-referenced with statutory rules from official portals before being recommended.
